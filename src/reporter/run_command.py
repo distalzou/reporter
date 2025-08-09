@@ -1,6 +1,6 @@
 import subprocess
 from contextlib import contextmanager, chdir
-from typing import Optional, Union, Iterator, Generator, Iterable
+from typing import Optional, Union, Iterator, Iterable
 from collections.abc import Sequence
 import io
 import signal
