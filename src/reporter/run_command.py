@@ -1,6 +1,6 @@
 import subprocess
 from contextlib import contextmanager, chdir
-from typing import Optional, Union, Iterator, Generator
+from typing import Optional, Union, Iterator, Generator, Iterable
 from collections.abc import Sequence
 import io
 import signal
@@ -14,7 +14,7 @@ def run_reporter_cmd(
     cmd_args: list[str],
     timeout: float = 300.0,
     working_dir: Optional[Union[str, Path]] = None
-) -> Iterator[tuple[Iterator[str], str, int]]:
+) -> Iterator[tuple[Iterable[str], str, int]]:
     command = ["java", "-jar", "Reporter.jar", "p=Reporter.properties"] + cmd_args
     try:
         with run_command(
@@ -32,8 +32,8 @@ def run_command(
     cmd: Sequence[str], 
     timeout: Optional[float] = None,
     kill_on_timeout: bool = True,
-    working_dir: Path | str = '.'
-) -> Iterator[tuple[Generator[str, None, None], str, int]]:
+    working_dir: Optional[Union[str, Path]] = None
+) -> Iterator[tuple[Iterable[str], str, int]]:
     """
     Run a command and return stdout as an iterable, stderr as string, and exit code.
     
@@ -59,7 +59,7 @@ def run_command(
             print(f"Exit code: {exit_code}")
     """
     logger.debug("Starting subprocess", command=cmd, cwd=working_dir)
-    with chdir(working_dir):
+    with chdir(working_dir or '.'):
         with subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -69,10 +69,10 @@ def run_command(
         ) as proc:
             try:
                 # Read output with optional timeout
-                communicate_kwargs = dict()
                 if timeout is not None:
-                    communicate_kwargs['timeout'] = timeout
-                stdout_text, stderr_text = proc.communicate(**communicate_kwargs)
+                    stdout_text, stderr_text = proc.communicate(timeout=timeout)
+                else:
+                    stdout_text, stderr_text = proc.communicate()
                     
             except subprocess.TimeoutExpired:
                 # Handle timeout - clean up process
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             print(f"Error: {stderr_text}")
 
 @contextmanager
-def run_command_v1(cmd: Sequence[str]) -> Iterator[tuple[Generator[str, None, None], str, int]]:
+def run_command_v1(cmd: Sequence[str]) -> Iterator[tuple[Iterable[str], str, int]]:
     """
     Run a command and return stdout as an iterable, stderr as string, and exit code.
     

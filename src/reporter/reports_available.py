@@ -21,7 +21,7 @@ def reports_available() -> None:
     data = dict()
     for account in account_tuples():
         print(f"Account: {account.name}, ID: {account.id}")
-        account_data = defaultdict(lambda: defaultdict(list))
+        account_data: defaultdict[int, defaultdict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
         for report in reports_available_tuples(account.id):
             account_data[report.vendor][report.report_type].append(report.region)
         data[account.id] = account_data
