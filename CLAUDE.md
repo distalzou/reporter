@@ -69,3 +69,9 @@ Both handle:
 - Reporter.jar exit codes: 0 = success, 1 = no data available, other = error
 - Structured logging with contextual information for troubleshooting
 - Graceful handling of missing data periods ("no sales for date specified")
+
+## Git Commit Guidelines
+
+- Keep commit messages concise and descriptive
+- Do not include Claude Code attribution or "Generated with Claude" text in commit messages
+- Focus commit messages on what changed and why
