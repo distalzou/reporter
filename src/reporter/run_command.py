@@ -6,6 +6,7 @@ import io
 import signal
 from pathlib import Path
 import structlog
+import tempfile
 
 logger = structlog.get_logger(__name__)
 
@@ -13,18 +14,69 @@ logger = structlog.get_logger(__name__)
 def run_reporter_cmd(
     cmd_args: list[str],
     timeout: float = 300.0,
-    working_dir: Optional[Union[str, Path]] = None
-) -> Iterator[tuple[Iterable[str], str, int]]:
+    reporter_dir: Optional[Union[str, Path]] = None
+) -> Iterator[tuple[Iterable[str], str, int, list[Path]]]:
+    """
+    Run a Reporter.jar command in a temporary directory with symlinks to required files.
+    
+    Creates a temporary directory and symlinks Reporter.jar and Reporter.properties
+    from the reporter_dir. After command execution, returns any new files created.
+    
+    Args:
+        cmd_args: Command arguments to pass to Reporter.jar
+        timeout: Maximum time to wait for command completion (seconds)
+        reporter_dir: Directory containing Reporter.jar and Reporter.properties
+        
+    Yields:
+        Tuple of (stdout_lines_iterator, stderr_text, exit_code, new_files_list)
+    """
     command = ["java", "-jar", "Reporter.jar", "p=Reporter.properties"] + cmd_args
+    
+    # Create temporary directory
+    temp_dir = Path(tempfile.mkdtemp(prefix="reporter_"))
+    logger.debug("Created temporary directory", temp_dir=str(temp_dir))
+    
     try:
+        # Create symlinks to Reporter.jar and Reporter.properties
+        if reporter_dir:
+            reporter_path = Path(reporter_dir)
+            jar_source = reporter_path / "Reporter.jar"
+            properties_source = reporter_path / "Reporter.properties"
+            
+            if jar_source.exists():
+                (temp_dir / "Reporter.jar").symlink_to(jar_source.resolve())
+                logger.debug("Created symlink to Reporter.jar", source=str(jar_source))
+            else:
+                logger.warning("Reporter.jar not found", path=str(jar_source))
+                
+            if properties_source.exists():
+                (temp_dir / "Reporter.properties").symlink_to(properties_source.resolve())
+                logger.debug("Created symlink to Reporter.properties", source=str(properties_source))
+            else:
+                logger.warning("Reporter.properties not found", path=str(properties_source))
+        
+        # Run the command in the temporary directory
         with run_command(
             cmd=command,
             timeout=timeout, 
-            working_dir=working_dir
+            working_dir=temp_dir
         ) as (stdout_lines, stderr_text, exit_code):
-            yield stdout_lines, stderr_text, exit_code
+            
+            # Find all files that are not symlinks
+            new_files = [
+                f for f in temp_dir.rglob("*")
+                if f.is_file() and not f.is_symlink()
+            ]
+            
+            logger.debug("Command completed", 
+                        exit_code=exit_code, 
+                        new_files_count=len(new_files),
+                        temp_dir=str(temp_dir))
+            
+            yield stdout_lines, stderr_text, exit_code, new_files
+            
     except Exception as e:
-        logger.error("Failed to run reporter command", error=str(e))
+        logger.error("Failed to run reporter command", error=str(e), temp_dir=str(temp_dir))
         raise
 
 @contextmanager

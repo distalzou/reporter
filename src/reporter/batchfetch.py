@@ -56,18 +56,43 @@ def get_report(report: AvailableReport, account: Account, year: int, month: int)
                 f"{month},"]                # Fiscal Period
     with run_reporter_cmd(
         cmd_args=cmd_args,
-        working_dir="/Users/devin/src/reporter/Reporter"
-    ) as (stdout_lines, stderr_text, exit_code):
+        reporter_dir="/Users/devin/src/reporter/Reporter"
+    ) as (stdout_lines, stderr_text, exit_code, new_files):
         stdout_text = ''.join(stdout_lines)
         desc = f"{report.vendor} in {report.region} for {year}-{month:02d}"
+        
         if exit_code == 0:
             match = re.match(r'Successfully downloaded (.+)', stdout_text.rstrip())
             if match:
-                filename = match.group(1)
-                logger.info(f"{desc}: Downloaded report {filename}")
+                expected_filename = match.group(1)
+                created_filenames = {f.name for f in new_files}
+                
+                # Verify the expected file exists in new_files
+                if expected_filename in created_filenames:
+                    logger.info(f"{desc}: Downloaded report {expected_filename}")
+                else:
+                    logger.error(f"{desc}: Expected file '{expected_filename}' not found in created files", 
+                               created_files=[str(f) for f in new_files])
+                
+                # Log any additional unexpected files using set subtraction
+                other_filenames = created_filenames - {expected_filename}
+                if other_filenames:
+                    logger.warning(f"{desc}: Additional unexpected files created", 
+                                 expected_file=expected_filename,
+                                 additional_files=list(other_filenames))
+                    
             else:
                 logger.warning(f"{desc}: Unexpected output: {stdout_text.rstrip()}")
+                # Still check for unexpected files even if output format is wrong
+                if new_files:
+                    logger.warning(f"{desc}: Files created despite unexpected output",
+                                 files=[str(f) for f in new_files])
         else:
+            # For non-zero exit codes, any files created are unexpected
+            if new_files:
+                logger.warning(f"{desc}: Unexpected files created on failure", 
+                             exit_code=exit_code, files=[str(f) for f in new_files])
+            
             if exit_code == 1:
                 if stdout_text.rstrip() == "There were no sales for the date specified.":
                     logger.info(f"{desc}: No sales data available")

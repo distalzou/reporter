@@ -1,6 +1,5 @@
 """Tests for asynclib.async_subprocess_manager module."""
 
-import pytest
 from asynclib.async_subprocess_manager import SubprocessError
 
 

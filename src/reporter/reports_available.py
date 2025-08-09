@@ -37,7 +37,12 @@ def reports_available() -> None:
 
 def reports_available_lines(account_id: int) -> Iterator:
     """List available reports per vendor."""
-    with run_reporter_cmd([f"a={account_id}", "Finance.getVendorsAndRegions"], working_dir="/Users/devin/src/reporter/Reporter") as (stdout_lines, stderr_text, exit_code):
+    with run_reporter_cmd([f"a={account_id}", "Finance.getVendorsAndRegions"], reporter_dir="/Users/devin/src/reporter/Reporter") as (stdout_lines, stderr_text, exit_code, new_files):
+        # Warn about unexpected file creation during reports listing
+        if new_files:
+            logger.warning("Unexpected files created during reports listing", 
+                          account_id=account_id, files=[str(f) for f in new_files])
+        
         if exit_code == 0:
             for line in stdout_lines:
                 yield line.strip()

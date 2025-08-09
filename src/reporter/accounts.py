@@ -20,7 +20,12 @@ def accounts() -> None:
 
 def account_lines() -> Iterator:
     """List accounts."""
-    with run_reporter_cmd(["Finance.getAccounts"], working_dir="/Users/devin/src/reporter/Reporter") as (stdout_lines, stderr_text, exit_code):
+    with run_reporter_cmd(["Finance.getAccounts"], reporter_dir="/Users/devin/src/reporter/Reporter") as (stdout_lines, stderr_text, exit_code, new_files):
+        # Warn about unexpected file creation during account listing
+        if new_files:
+            logger.warning("Unexpected files created during account listing", 
+                          files=[str(f) for f in new_files])
+        
         if exit_code == 0:
             for line in stdout_lines:
                 yield line.strip()

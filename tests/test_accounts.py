@@ -1,7 +1,6 @@
 """Tests for reporter.accounts module."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from reporter.accounts import Account, account_tuples
 
 
