@@ -1,12 +1,38 @@
 import re
+import os
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from typing import Iterator
+from pathlib import Path
 from reporter.run_command import run_reporter_cmd
 from reporter.accounts import account_tuples, Account
 from reporter.reports_available import reports_available_tuples, AvailableReport
 import structlog
 logger = structlog.get_logger(__name__)
+
+def get_reporter_dir() -> str:
+    """Get the Reporter directory path from environment or default location.
+    
+    Returns:
+        Path to the Reporter directory containing Reporter.jar and Reporter.properties
+    """
+    # Try environment variable first
+    if reporter_dir := os.environ.get('REPORTER_DIR'):
+        return reporter_dir
+    
+    # Try relative to current working directory
+    cwd_reporter = Path.cwd() / 'Reporter'
+    if cwd_reporter.exists():
+        return str(cwd_reporter)
+    
+    # Try relative to project root (assuming we're in src/reporter/)
+    project_root = Path(__file__).parent.parent.parent
+    project_reporter = project_root / 'Reporter'
+    if project_reporter.exists():
+        return str(project_reporter)
+    
+    # Default fallback - let the user know they need to configure this
+    return 'Reporter'
 
 # A simple stepped date range generator, yields each period in the range
 def date_range(start: date, end: date, delta: relativedelta) -> Iterator[date]:
@@ -56,7 +82,7 @@ def get_report(report: AvailableReport, account: Account, year: int, month: int)
                 f"{month},"]                # Fiscal Period
     with run_reporter_cmd(
         cmd_args=cmd_args,
-        reporter_dir="/Users/devin/src/reporter/Reporter"
+        reporter_dir=get_reporter_dir()
     ) as (stdout_lines, stderr_text, exit_code, new_files):
         stdout_text = ''.join(stdout_lines)
         desc = f"{report.vendor} in {report.region} for {year}-{month:02d}"

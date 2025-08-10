@@ -34,7 +34,7 @@ def parse_date_string(date_str: str) -> tuple[int, int]:
 
 app = typer.Typer(add_completion=False, help="Automation for Apple's Reporter.jar")
 
-@app.command("batchfetch", help="Fetch all reports availbale, for all known accounts and all vendors in each account, in the given date range, using either individual date components or date strings.")
+@app.command("batchfetch", help="Fetch all reports available, for all known accounts and all vendors in each account, in the given date range, using either individual date components or date strings.")
 def batchfetch(
     start_year:  Annotated[int | None, typer.Option("--start_year")] = None,
     start_month: Annotated[int | None, typer.Option("--start_month")] = None,
